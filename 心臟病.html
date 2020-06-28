@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打殭屍</title>
+    <style>
+        body {
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg,rgba(0,100,30,0.3) 0%,rgba(50,50,100,0.4) 45%,rgba(250,0,150,0.2) 100%), radial-gradient(circle, #004A4A 0%, #002727 100%);
+        }
+        /* 出牌區域 */
+        #game {
+            top: calc(50% - 100px);
+            left: calc(50% - 400px);
+            width: 800px;
+            height: 450px;
+            /* border:2px solid #ddd; */
+            overflow: hidden;
+            position: relative;
+            border-radius: 1rem;
+            transform: perspective(500px) rotateX(40deg);
+        }
+
+        /* #game>div {
+            width: 150px;
+            height: 200px;
+            background-color: #fff;
+            border-radius: 15px;
+            color: black;
+            font-size: 60px;
+            position: absolute;
+            text-align: center;
+            line-height: 150px;
+            border: 4px solid #888;
+            text-decoration: underline;
+        } */
+
+        /* 目標數字 */
+        #number {
+            position: absolute;
+            left: 80%;
+            top: 25%;
+            color: #fff;
+            font-size: 100px;
+            background-color: cadetblue;
+            display: inline-block;
+            width: 120px;
+            text-align: center;
+            border-radius: 10%;
+            z-index: 10;
+        }
+
+        .title {
+            position: absolute;
+            left: calc(50% - 320px);
+            top: 50px;
+            display: inline-block;
+        }
+
+        .text {
+            width: 300px;
+            position: absolute;
+            left: 8%;
+            top: 20%;
+            font-family: '微軟正黑體';
+            color: #fff;
+        }
+
+        .co {
+            width: 100px;
+            height: 180px;
+            /* 設定子元素在 3D 空間內 */
+            transform-style: preserve-3d;
+            /* position: relative; */
+            position: absolute;
+            /* 整張卡片的旋轉 */
+            transform: rotateY(0deg);
+            /* 0.5 秒翻轉動畫 */
+            transition: transform .5s;
+            float: left;
+            margin: 10px;
+        }
+
+        .front {
+            width: 100%;
+            height: 100%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            position: absolute;
+            background-image: url(./cards/1C.jpg);
+
+        }
+
+        .back {
+            width: 100%;
+            height: 100%;
+            background-image: url(./cards/Red_back.jpg);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            position: absolute;
+            /* 把背面的 div 轉到 front 後面貼齊 */
+            transform: rotateY(180deg);
+            backface-visibility: hidden;
+        }
+
+        .open {
+            transform: rotateY(180deg);
+        }
+
+        #particles-js{
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            z-index: -2;
+        }
+
+        .begin_anim{
+            height: 100vh;
+            width: 100vw;
+            background: url('./心臟病ui.svg') no-repeat center/cover;
+            position: absolute;
+            z-index: 999;
+        }
+        .backg{
+            background: url('./table.png') no-repeat center/cover;
+            height: 70%;
+            width: 100%;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 0;
+            z-index: -1;
+        }
+        /* 開始按鈕 */
+        #btn{
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            border:0;
+            background-color:#fff;
+            color:#003C9D;
+            border-radius:10px;
+            width:150px;
+            height:50px;
+            font-size: 20px;
+            font-family: 'Microsoft JhengHei';
+        }
+        .mytime{
+            position: absolute;
+            top: 35%;
+            left: 40%;
+            font-family: 'Microsoft JhengHei';
+            font-size: 20px;
+            color: #fff;
+        }
+        .myscore{
+            position: absolute;
+            top: 35%;
+            left: 55%;
+            font-family: 'Microsoft JhengHei';
+            font-size: 20px;
+            color: #fff;
+
+        }
+    </style>
+</head>
+
+<body>
+    <div class="begin_anim"></div>
+    <div class="backg"></div>
+    <div id="particles-js"></div>
+    <!-- <div class="co">
+        <div class="front"></div>
+        <div class="back"></div>
+    </div> -->
+    <img src="./title-2.svg" height="150px" class="title">
+    <p class="text">玩法：<br /><br />&emsp;&emsp;點擊開始後，電腦會隨機出牌，點擊和右上數字相同的牌可以獲得一分，點錯則扣分，出牌後只有一段時間可點擊，超出時間牌將翻面無法再點擊。</p>
+    <span id="number">&emsp;</span>
+    <div id="game"></div>
+    <input type="button" value="開始遊戲" id="btn">
+    <p class="mytime">剩餘時間：<span id="sec">10</span></p>
+    <p class="myscore">目前分數：<span id="score">0</span></p>
+
+    <script src="./jquery-3.5.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
+
+    <script>
+       
+        $(function () {
+
+            // 進入畫面
+            setTimeout(function(){
+                $('.begin_anim').fadeOut();
+            },200)
+        
+            // 測試翻面的卡片，左上
+            $(".co").on('click', function () {
+                $(this).addClass('open');
+            })
+
+            let score = 0;
+            let sec = 30;
+            let gametimer = 0;
+            let cards = 0;
+            let goal_num = 0;
+            let card = 0;
+
+            let clear = 0;
+
+            // 牌的花色
+            const cColor = ['C', 'D', 'H', 'S'];
+            const cNum = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+            let cdArray = []
+            
+
+            const rand = (num) => {
+                return Math.floor(Math.random() * num) + 1;
+            }
+
+            function randnum(min, max) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+
+            const movecd = (id) => {
+                $(`#cd${id}`).animate({
+                    left: rand(70) + "%",
+                    top: rand(70) + "%"
+                }, 3000, function () {
+                    movecd(id);
+                })
+            }
+
+            // 開始鍵
+            $("#btn").on("click", function () {
+                cdArray = []
+                // 產生兩副牌，放在陣列裡，共104張 (陣列 103)
+                for (let k = 0; k < 2; k++) {
+                    for (let i = 0; i < 4; i++) {
+                        for (let j = 0; j < 13; j++) {
+                            cdArray.push(cNum[j] + cColor[i])
+                        }
+                    }
+                }
+                console.log(cdArray);
+                $(this).attr("disabled", true);
+
+                // 重設時間、分數
+                sec = 20;
+                $("#sec").text(sec);
+                score = 0;
+                $("#score").text(score);
+                card = 0;
+                goal_num =0;
+
+                // 計時
+                gametimer = setInterval(() => {
+
+                    // 顯示倒數
+                    sec--;
+                    $("#sec").text(sec);
+
+                    // 時間到
+                    if (sec == 0) {
+                        clearInterval(gametimer);
+                        clearInterval(cards);
+                        // 啟用開始建
+                        $(this).attr("disabled", false);
+                        // 清空目標數字
+                        $('#number').text(' ');
+                        goal_num = 0;
+                        
+                        setTimeout(() => {
+                            alert("時間到");
+                            // $("#game img").remove();
+                            // 清空桌上的牌
+                            $('#game div').remove();
+                        }, 100)
+                    }
+                }, 1000)
+
+                // 出牌
+                let all_cards = 103;
+                
+                cards = setInterval(function () {
+                    // 每秒顯示新目標數字
+                    $('#number').text(cNum[goal_num]);
+                    // 讓每張牌隨機轉一個角度
+                    let deg = rand(180);
+                    // 隨機出牌
+                    let num = rand(all_cards);
+                    all_cards--;
+                    cdArray.splice(num,1);
+                    console.log(cdArray.length);
+
+                    let content = '';
+
+                    if(cdArray[num].length<3){
+                        content = cdArray[num].slice(0,1);
+                    }else{
+                        content = cdArray[num].slice(0,2);
+                    }
+
+                    //加入一張牌 
+                    $("#game").append(`<div id="cd${card}" data-num="${content}" data-isBack='false' class="co"><div class="front"></div><div class="back"></div></div>`);
+
+                    // 讓牌出現在隨意一個位置
+                    $(`#cd${card}`).css({
+                        left: randnum(50, 650) + "px",
+                        top: randnum(0, 270) + "px",
+                        transform: `rotateZ(${deg}deg)`
+                    });
+                    console.log(cdArray[num]);
+                    console.log(content);
+                    // 把花色加到牌上
+                    $(`#cd${card}`).find('.front').css("background-image", `url(./cards/${cdArray[num]}.jpg)`);
+
+                    // 時間到沒有被點擊，就讓他自動翻過去
+                    clear(card,deg);
+
+                    // 準備下一張牌的變數
+                    card++;
+                    goal_num++;
+                    if (goal_num == 13) {
+                        goal_num = 0;
+                    }
+                }, 1000)
+
+                // 判斷過了(幾秒)之後，如果沒有被翻過去就讓他翻過去
+                clear = (card,deg) => {
+                    setTimeout(() => {
+                        // console.log($('#game').find('div'));
+                        // console.log($(`#cd${card}`).css('background-color'));
+                        if ($(`#cd${card}`).attr('data-isBack') != 'true') {
+                            $(`#cd${card}`).css('transform',`rotateY(180deg) rotateZ(${180-deg}deg)`);
+
+                            $(`#cd${card}`).css("pointer-events", "none");
+                        }
+                    }, 800)
+
+                }
+            })
+
+            // 當卡牌被點擊
+            $("#game").on("mousedown", ".co", function () {
+                // $(this).attr("src", "./bone.png");
+
+                if($(this).attr('data-num') == goal_num){
+                    $(this).find('.back').css('background-image',`url(./cards/Green_back.jpg)`);
+                    $(this).css('transform',`rotateY(180deg) rotateZ(${rand(180)}deg)`);
+                    $(this).attr('data-isBack','true');
+
+                    $(this).css("pointer-events", "none");
+                    score++;
+                    $("#score").text(score);
+                }else {
+                    $(this).find('.back').css('background-image',`url(./cards/Red_back.jpg)`)
+                    $(this).css('transform',`rotateY(180deg) rotateZ(${rand(180)}deg)`);
+                    $(this).attr('data-isBack','true');
+
+                    $(this).css("pointer-events", "none");
+                    score--;
+                    $("#score").text(score);
+                }
+            })
+
+
+        })
+    </script>
+    <script src="particles.min.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
